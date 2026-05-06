@@ -3,63 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Professional Chess</title>
+    <title>Chess.com Clone</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
+        /* Exact Chess.com Color Palette */
+        :root {
+            --bg-dark: #312e2b;
+            --board-light: #ebecd0;
+            --board-dark: #739552;
+            --yellow-highlight: rgba(255, 255, 51, 0.5);
+            --red-check: radial-gradient(ellipse at center, red 0%, transparent 70%);
+            --dot-color: rgba(0, 0, 0, 0.15);
+        }
+
         body { 
-            background: #262421; 
+            background-color: var(--bg-dark); 
             margin: 0; 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
-            justify-content: center; 
-            height: 100vh;
+            justify-content: flex-start; /* Aligns to top instead of center */
+            min-height: 100vh;
             color: white;
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+            padding-top: 10px;
         }
 
-        #myBoard { width: 95vw; max-width: 450px; }
+        /* Profile Layouts */
+        .player-profile {
+            width: 100%;
+            max-width: 450px;
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            background-color: #555;
+            margin-right: 12px;
+            background-size: cover;
+        }
 
-        /* Chess.com Colors */
-        .white-1e1d7 { background-color: #ebecd0 !important; }
-        .black-3c85d { background-color: #779556 !important; }
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
 
-        /* HIGHLIGHTS - Using !important to force them over the board colors */
+        .username {
+            font-weight: 700;
+            font-size: 14px;
+            color: #fff;
+        }
+
+        .rating {
+            font-size: 12px;
+            color: #a7a6a2;
+        }
+
+        /* Board Styling */
+        #myBoard { 
+            width: 100vw; 
+            max-width: 450px; 
+            touch-action: none; /* Prevents mobile scrolling when tapping */
+        }
+
+        .white-1e1d7 { background-color: var(--board-light) !important; }
+        .black-3c85d { background-color: var(--board-dark) !important; }
+
+        /* Forced Highlights */
         .highlight-yellow {
-            box-shadow: inset 0 0 3px 3px rgba(255, 255, 0, 0.75) !important;
-            background-color: rgba(255, 255, 0, 0.4) !important;
+            background-color: var(--yellow-highlight) !important;
         }
 
         .highlight-red {
-            background-color: rgba(255, 0, 0, 0.7) !important;
+            background: var(--red-check) !important;
         }
 
-        /* Legal Move Dots */
-        .hint-dot {
-            position: relative;
-        }
+        /* Legal Move Dots - Chess.com Style */
+        .hint-dot { position: relative; }
         .hint-dot::after {
             content: "";
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 25%; height: 25%;
-            background: rgba(0, 0, 0, 0.2);
+            width: 30%; height: 30%;
+            background-color: var(--dot-color);
             border-radius: 50%;
             z-index: 10;
         }
-
-        #status { margin-bottom: 15px; font-size: 1.2rem; background: #312e2b; padding: 5px 15px; border-radius: 5px; }
+        
+        /* Capture Hint (Hollow circle when moving to an occupied square) */
+        .hint-capture { position: relative; }
+        .hint-capture::after {
+            content: "";
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%; height: 80%;
+            border: 5px solid var(--dot-color);
+            border-radius: 50%;
+            z-index: 10;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
 
-    <div id="status">White to move</div>
+    <audio id="snd-move" src="https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/move-self.mp3" preload="auto"></audio>
+    <audio id="snd-capture" src="https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/capture.mp3" preload="auto"></audio>
+    <audio id="snd-check" src="https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/move-check.mp3" preload="auto"></audio>
+
+    <div class="player-profile">
+        <div class="avatar" style="background-image: url('https://www.chess.com/bundles/web/images/user-image.svg');"></div>
+        <div class="user-info">
+            <span class="username">Opponent Bot</span>
+            <span class="rating">1200</span>
+        </div>
+    </div>
+
     <div id="myBoard"></div>
+
+    <div class="player-profile">
+        <div class="avatar" style="background-image: url('https://www.chess.com/bundles/web/images/user-image.svg');"></div>
+        <div class="user-info">
+            <span class="username">Shivam</span>
+            <span class="rating">1500</span>
+        </div>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="app.js"></script>
 </body>
-</html>
+    </html>
+        

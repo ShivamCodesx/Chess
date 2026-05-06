@@ -1,130 +1,151 @@
 var board = null;
 var game = new Chess();
-var $status = $('#status');
 var moveFrom = null;
 var moveTo = null;
 var selectedSquare = null;
 
-// SOUNDS - High quality chess sounds
-const moveSound = new Audio('https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/move-self.mp3');
-const captureSound = new Audio('https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/capture.mp3');
-const checkSound = new Audio('https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/move-check.mp3');
+// HTML Audio Elements
+const sndMove = document.getElementById('snd-move');
+const sndCapture = document.getElementById('snd-capture');
+const sndCheck = document.getElementById('snd-check');
 
-function removeHighlights() {
-    $('#myBoard .square-55d63').removeClass('highlight-yellow hint-dot highlight-red');
+// Audio Unlocker for Mobile Safari/Chrome
+let audioUnlocked = false;
+function unlockAudio() {
+    if (!audioUnlocked) {
+        sndMove.play().then(() => { sndMove.pause(); sndMove.currentTime = 0; }).catch(() => {});
+        audioUnlocked = true;
+    }
 }
 
-function applyHighlights() {
-    // Highlight Last Move (Yellow)
+function playSound(move) {
+    if (!move) return;
+    if (game.in_check()) {
+        sndCheck.currentTime = 0; sndCheck.play().catch(e=>{});
+    } else if (move.flags.includes('c') || move.flags.includes('e')) {
+        sndCapture.currentTime = 0; sndCapture.play().catch(e=>{});
+    } else {
+        sndMove.currentTime = 0; sndMove.play().catch(e=>{});
+    }
+}
+
+// Clears absolutely everything (dots, yellow, red)
+function clearAllHighlights() {
+    $('#myBoard .square-55d63').removeClass('highlight-yellow hint-dot hint-capture highlight-red');
+}
+
+// Re-applies only the permanent highlights (Last Move + Check)
+function restorePermanentHighlights() {
+    // 1. Last Move (Yellow)
     if (moveFrom) $('#myBoard .square-' + moveFrom).addClass('highlight-yellow');
     if (moveTo) $('#myBoard .square-' + moveTo).addClass('highlight-yellow');
 
-    // Highlight King if in Check (Red)
+    // 2. Check (Red King)
     if (game.in_check()) {
-        var kingSquare = findKing(game.turn());
-        $('#myBoard .square-' + kingSquare).addClass('highlight-red');
-    }
-}
-
-function findKing(color) {
-    var b = game.board();
-    for (var i = 0; i < 8; i++) {
-        for (var j = 0; j < 8; j++) {
-            var p = b[i][j];
-            if (p && p.type === 'k' && p.color === color) {
-                return String.fromCharCode(97 + j) + (8 - i);
+        var b = game.board();
+        for (var i = 0; i < 8; i++) {
+            for (var j = 0; j < 8; j++) {
+                if (b[i][j] && b[i][j].type === 'k' && b[i][j].color === game.turn()) {
+                    var sq = String.fromCharCode(97 + j) + (8 - i);
+                    $('#myBoard .square-' + sq).addClass('highlight-red');
+                }
             }
         }
-    }
-}
-
-function handleSound(move) {
-    if (game.in_check()) {
-        checkSound.play();
-    } else if (move.flags.includes('c') || move.flags.includes('e')) {
-        captureSound.play();
-    } else {
-        moveSound.play();
     }
 }
 
 function onSquareClick() {
+    unlockAudio();
     var square = $(this).attr('data-square');
 
-    // Selecting a piece
-    if (selectedSquare === null) {
-        var piece = game.get(square);
-        if (piece && piece.color === game.turn()) {
-            selectedSquare = square;
-            removeHighlights();
-            applyHighlights();
-            $(this).addClass('highlight-yellow');
-            
-            var moves = game.moves({ square: square, verbose: true });
-            moves.forEach(m => $('#myBoard .square-' + m.to).addClass('hint-dot'));
-        }
-    } 
-    // Attempting a move
-    else {
+    // SCENARIO 1: Clicking the already selected piece -> Deselect it.
+    if (selectedSquare === square) {
+        selectedSquare = null;
+        clearAllHighlights();
+        restorePermanentHighlights();
+        return;
+    }
+
+    var piece = game.get(square);
+
+    // SCENARIO 2: Clicking a new piece of your own color -> Select it and show dots.
+    if (piece && piece.color === game.turn()) {
+        selectedSquare = square;
+        clearAllHighlights();
+        restorePermanentHighlights();
+        
+        // Highlight the piece you just tapped
+        $(this).addClass('highlight-yellow');
+        
+        // Show legal moves
+        var moves = game.moves({ square: square, verbose: true });
+        moves.forEach(m => {
+            var targetSquare = $('#myBoard .square-' + m.to);
+            if (game.get(m.to)) {
+                targetSquare.addClass('hint-capture'); // Hollow circle if attacking
+            } else {
+                targetSquare.addClass('hint-dot'); // Solid dot for empty square
+            }
+        });
+        return;
+    }
+
+    // SCENARIO 3: Clicking a destination to make a move.
+    if (selectedSquare) {
         var move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
 
+        // If illegal move, just deselect
         if (move === null) {
             selectedSquare = null;
-            // Recursively call to select the new piece if it belongs to the player
-            var piece = game.get(square);
-            if (piece && piece.color === game.turn()) {
-                onSquareClick.call(this);
-            } else {
-                removeHighlights();
-                applyHighlights();
-            }
+            clearAllHighlights();
+            restorePermanentHighlights();
             return;
         }
 
-        handleSound(move);
+        // Legal move executed!
         moveFrom = move.from;
         moveTo = move.to;
         selectedSquare = null;
         
-        board.position(game.fen());
-        updateStatus();
+        playSound(move);
+        board.position(game.fen(), false); // false = instant snap, no slow animation
+        
+        clearAllHighlights();
+        restorePermanentHighlights();
     }
-}
-
-function updateStatus() {
-    var status = game.turn() === 'b' ? 'Black to move' : 'White to move';
-    if (game.in_checkmate()) status = 'CHECKMATE!';
-    else if (game.in_draw()) status = 'DRAW';
-    $status.html(status);
 }
 
 var config = {
     draggable: true,
     position: 'start',
     onDrop: function(source, target) {
+        unlockAudio();
         var move = game.move({ from: source, to: target, promotion: 'q' });
+        
         if (move === null) return 'snapback';
         
-        handleSound(move);
         moveFrom = source;
         moveTo = target;
-        updateStatus();
+        playSound(move);
+        
+        clearAllHighlights();
+        restorePermanentHighlights();
     },
     onSnapEnd: function() {
         board.position(game.fen());
-        removeHighlights();
-        applyHighlights();
+        clearAllHighlights();
+        restorePermanentHighlights();
     },
     pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
 };
 
 board = ChessBoard('myBoard', config);
 
-// Mobile-optimized click handler
-$('#myBoard').on('touchstart click', '.square-55d63', function(e) {
+// Master click/touch listener
+$('#myBoard').on('mousedown touchstart', '.square-55d63', function(e) {
     e.preventDefault();
     onSquareClick.call(this);
 });
 
-updateStatus();
-    
+restorePermanentHighlights();
+                      

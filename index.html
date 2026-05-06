@@ -3,42 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Waguri Chess</title>
-    
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground/assets/chessground.base.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground/assets/chessground.brown.css">
-    
+    <title>Waguri Chess Pro</title>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
-        :root { --bg: #312e2b; }
-        body { background: var(--bg); color: white; margin: 0; display: flex; flex-direction: column; align-items: center; font-family: sans-serif; }
-        
-        .profile { width: 100%; max-width: 400px; display: flex; align-items: center; padding: 10px; box-sizing: border-box; }
-        .avatar { width: 35px; height: 35px; background: #555; border-radius: 4px; margin-right: 10px; }
-        
-        /* The Board Container */
-        #board-container { width: 95vw; height: 95vw; max-width: 400px; max-height: 400px; }
-        .cg-wrap { width: 100%; height: 100%; }
+        :root {
+            --bg: #312e2b;
+            --light: #ebecd0;
+            --dark: #779556;
+            --yellow: rgba(255, 255, 51, 0.5);
+            --red: rgba(255, 0, 0, 0.8);
+        }
+
+        body { 
+            background: var(--bg); color: white; margin: 0; 
+            display: flex; flex-direction: column; align-items: center; 
+            font-family: -apple-system, sans-serif; height: 100vh; overflow: hidden;
+        }
+
+        /* Profiles at Top and Bottom */
+        .player-bar {
+            width: 100%; max-width: 400px; display: flex; align-items: center;
+            padding: 12px; box-sizing: border-box; background: #262421;
+        }
+        .avatar { width: 40px; height: 40px; background: #555; border-radius: 4px; margin-right: 12px; }
+        .name-box { flex-grow: 1; }
+        .username { font-weight: bold; display: block; font-size: 14px; }
+        .elo { color: #a7a6a2; font-size: 12px; }
+
+        #myBoard { width: 100vw; max-width: 400px; }
+
+        /* Chess.com Board Design */
+        .white-1e1d7 { background-color: var(--light) !important; }
+        .black-3c85d { background-color: var(--dark) !important; }
+
+        /* Perfect Highlights */
+        .highlight-yellow { background-color: var(--yellow) !important; box-shadow: inset 0 0 2px 2px rgba(255,255,0,0.5); }
+        .highlight-red { background: radial-gradient(circle, rgba(255,0,0,1) 0%, rgba(255,0,0,0.5) 80%, transparent 100%) !important; }
+
+        /* Legal Move Dots */
+        .hint-dot { position: relative; }
+        .hint-dot::after {
+            content: ""; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); width: 26%; height: 26%;
+            background: rgba(0,0,0,0.15); border-radius: 50%;
+        }
+
+        .hint-capture { position: relative; }
+        .hint-capture::after {
+            content: ""; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); width: 80%; height: 80%;
+            border: 6px solid rgba(0,0,0,0.15); border-radius: 50%; box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
 
-    <div class="profile">
-        <div class="avatar"></div>
-        <span>Opponent (1200)</span>
+    <audio id="snd-move" src="https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/move-self.mp3"></audio>
+    <audio id="snd-capture" src="https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/capture.mp3"></audio>
+    <audio id="snd-check" src="https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/move-check.mp3"></audio>
+
+    <div class="player-bar">
+        <div class="avatar" style="background: url('https://www.chess.com/bundles/web/images/user-image.svg') center/cover;"></div>
+        <div class="name-box">
+            <span class="username">Opponent Bot</span>
+            <span class="elo">1200</span>
+        </div>
     </div>
 
-    <div id="board-container">
-        <div id="chess-board"></div>
+    <div id="myBoard"></div>
+
+    <div class="player-bar">
+        <div class="avatar" style="background: url('https://www.chess.com/bundles/web/images/user-image.svg') center/cover;"></div>
+        <div class="name-box">
+            <span class="username">Shivam</span>
+            <span class="elo">1500</span>
+        </div>
     </div>
 
-    <div class="profile">
-        <div class="avatar"></div>
-        <span>Shivam (1500)</span>
-    </div>
-
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chessground/chessground.js"></script>
-    <script src="app.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+
+    <script>
+        var board = null;
+        var game = new Chess();
+        var moveFrom = null, moveTo = null, selected = null;
+
+        function playSound(m) {
+            if (game.in_check()) document.getElementById('snd-check').play();
+            else if (m.flags.includes('c') || m.flags.includes('e')) document.getElementById('snd-capture').play();
+            else document.getElementById('snd-move').play();
+        }
+
+        // The "Glitch-Killer" Drawing Function
+        function render() {
+            // Remove everything first
+            $('.square-55d63').removeClass('highlight-yellow hint-dot hint-capture highlight-red');
+
+            // 1. Red King if Checked
+            if (game.in_check()) {
+                game.board().forEach((row, i) => row.forEach((p, j) => {
+                    if (p && p.type === 'k' && p.color === game.turn()) {
+                        $('.square-' + String.fromCharCode(97+j) + (8-i)).addClass('highlight-red');
+                    }
+                }));
+            }
+
+            // 2. Yellow Last Move
+            if (moveFrom) $('.square-' + moveFrom).addClass('highlight-yellow');
+            if (moveTo) $('.square-' + moveTo).addClass('highlight-yellow');
+
+            // 3. Selection & Dots
+            if (selected) {
+                $('.square-' + selected).addClass('highlight-yellow');
+                game.moves({square: selected, verbose: true}).forEach(m => {
+                    $('.square-' + m.to).addClass(game.get(m.to) ? 'hint-capture' : 'hint-dot');
+                });
+            }
+        }
+
+        function onSquareClick() {
+            var sq = $(this).attr('data-square');
+            var piece = game.get(sq);
+
+            // Case A: Deselecting
+            if (selected === sq) {
+                selected = null;
+            } 
+            // Case B: Selecting your own piece
+            else if (piece && piece.color === game.turn()) {
+                selected = sq;
+            } 
+            // Case C: Trying to move
+            else if (selected) {
+                var move = game.move({from: selected, to: sq, promotion: 'q'});
+                if (move) {
+                    moveFrom = move.from; moveTo = move.to; selected = null;
+                    playSound(move);
+                    board.position(game.fen());
+                } else {
+                    selected = null; // Illegal move click clears selection
+                }
+            }
+            render();
+        }
+
+        board = ChessBoard('myBoard', {
+            draggable: true,
+            position: 'start',
+            onDrop: (s, t) => {
+                var m = game.move({from: s, to: t, promotion: 'q'});
+                if (!m) return 'snapback';
+                moveFrom = s; moveTo = t; selected = null;
+                playSound(m);
+            },
+            onSnapEnd: () => { board.position(game.fen()); render(); },
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+        });
+
+        $('#myBoard').on('click touchstart', '.square-55d63', onSquareClick);
+        render();
+    </script>
 </body>
-    </html>
-                                  
+                                                   </html>
+    

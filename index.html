@@ -3,142 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chess.com Clone</title>
-    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <title>Waguri Chess</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground/assets/chessground.base.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground/assets/chessground.brown.css">
+    
     <style>
-        /* Exact Chess.com Color Palette */
-        :root {
-            --bg-dark: #312e2b;
-            --board-light: #ebecd0;
-            --board-dark: #739552;
-            --yellow-highlight: rgba(255, 255, 51, 0.5);
-            --red-check: radial-gradient(ellipse at center, red 0%, transparent 70%);
-            --dot-color: rgba(0, 0, 0, 0.15);
-        }
-
-        body { 
-            background-color: var(--bg-dark); 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: flex-start; /* Aligns to top instead of center */
-            min-height: 100vh;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
-            padding-top: 10px;
-        }
-
-        /* Profile Layouts */
-        .player-profile {
-            width: 100%;
-            max-width: 450px;
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            box-sizing: border-box;
-        }
+        :root { --bg: #312e2b; }
+        body { background: var(--bg); color: white; margin: 0; display: flex; flex-direction: column; align-items: center; font-family: sans-serif; }
         
-        .avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 4px;
-            background-color: #555;
-            margin-right: 12px;
-            background-size: cover;
-        }
-
-        .user-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .username {
-            font-weight: 700;
-            font-size: 14px;
-            color: #fff;
-        }
-
-        .rating {
-            font-size: 12px;
-            color: #a7a6a2;
-        }
-
-        /* Board Styling */
-        #myBoard { 
-            width: 100vw; 
-            max-width: 450px; 
-            touch-action: none; /* Prevents mobile scrolling when tapping */
-        }
-
-        .white-1e1d7 { background-color: var(--board-light) !important; }
-        .black-3c85d { background-color: var(--board-dark) !important; }
-
-        /* Forced Highlights */
-        .highlight-yellow {
-            background-color: var(--yellow-highlight) !important;
-        }
-
-        .highlight-red {
-            background: var(--red-check) !important;
-        }
-
-        /* Legal Move Dots - Chess.com Style */
-        .hint-dot { position: relative; }
-        .hint-dot::after {
-            content: "";
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 30%; height: 30%;
-            background-color: var(--dot-color);
-            border-radius: 50%;
-            z-index: 10;
-        }
+        .profile { width: 100%; max-width: 400px; display: flex; align-items: center; padding: 10px; box-sizing: border-box; }
+        .avatar { width: 35px; height: 35px; background: #555; border-radius: 4px; margin-right: 10px; }
         
-        /* Capture Hint (Hollow circle when moving to an occupied square) */
-        .hint-capture { position: relative; }
-        .hint-capture::after {
-            content: "";
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%; height: 80%;
-            border: 5px solid var(--dot-color);
-            border-radius: 50%;
-            z-index: 10;
-            box-sizing: border-box;
-        }
+        /* The Board Container */
+        #board-container { width: 95vw; height: 95vw; max-width: 400px; max-height: 400px; }
+        .cg-wrap { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
 
-    <audio id="snd-move" src="https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/move-self.mp3" preload="auto"></audio>
-    <audio id="snd-capture" src="https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/capture.mp3" preload="auto"></audio>
-    <audio id="snd-check" src="https://images.chesscomfiles.com/chess-themes/pieces/neo/sounds/move-check.mp3" preload="auto"></audio>
-
-    <div class="player-profile">
-        <div class="avatar" style="background-image: url('https://www.chess.com/bundles/web/images/user-image.svg');"></div>
-        <div class="user-info">
-            <span class="username">Opponent Bot</span>
-            <span class="rating">1200</span>
-        </div>
+    <div class="profile">
+        <div class="avatar"></div>
+        <span>Opponent (1200)</span>
     </div>
 
-    <div id="myBoard"></div>
-
-    <div class="player-profile">
-        <div class="avatar" style="background-image: url('https://www.chess.com/bundles/web/images/user-image.svg');"></div>
-        <div class="user-info">
-            <span class="username">Shivam</span>
-            <span class="rating">1500</span>
-        </div>
+    <div id="board-container">
+        <div id="chess-board"></div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <div class="profile">
+        <div class="avatar"></div>
+        <span>Shivam (1500)</span>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chessground/chessground.js"></script>
     <script src="app.js"></script>
 </body>
     </html>
-        
+                                  

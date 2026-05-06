@@ -1,18 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Discord Chess</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chess</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
-        body { background: #23272a; color: white; text-align: center; font-family: sans-serif; }
-        #board { width: 95vw; max-width: 400px; margin: 20px auto; }
+        :root {
+            --bg-color: #312e2b;
+            --light-sq: #ebecd0;
+            --dark-sq: #779556;
+            --highlight: rgba(255, 255, 0, 0.5); /* Yellow */
+            --check: rgba(255, 0, 0, 0.6); /* Red */
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #myBoard {
+            width: 95vw;
+            max-width: 450px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        /* Chess.com Square Colors */
+        .white-1e1d7 { background-color: var(--light-sq) !important; }
+        .black-3c85d { background-color: var(--dark-sq) !important; }
+
+        /* Highlights */
+        .highlight-move { box-shadow: inset 0 0 3px 3px var(--highlight); }
+        .highlight-check { background-color: var(--check) !important; }
+
+        /* Legal Move Dots */
+        .hint-dot {
+            position: relative;
+        }
+        .hint-dot::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 25%;
+            height: 25%;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+        }
+
+        .status-container {
+            margin-bottom: 15px;
+            background: #262421;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 <body>
-    <h2>Chess Bot Activity</h2>
-    <div id="board"></div>
-    <p>Status: <span id="status">White to move</span></p>
+
+    <div class="status-container">
+        <span id="status">White to move</span>
+    </div>
+
+    <div id="myBoard"></div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
@@ -20,4 +80,3 @@
     <script src="app.js"></script>
 </body>
 </html>
-
